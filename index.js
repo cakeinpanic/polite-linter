@@ -6,66 +6,86 @@ const colors = require('colors');
 
 let {rulesDirectory, configurationFilename} = require('./environment');
 
-const options = {
-    fix: false,
-    formatter: 'json',
-    rulesDirectory: rulesDirectory
-};
+class TSLinter {
+    constructor() {
+        const options = {
+            fix: false,
+            formatter: 'json',
+            rulesDirectory: rulesDirectory
+        };
 
-function lintMe(filename, fileContents) {
-    let linter = new tslint.Linter(options);
+        this.tsLinter = new tslint.Linter(options);
+        this.config = tslint.Configuration.loadConfigurationFromPath(path.resolve(process.cwd(), configurationFilename));
+    }
 
-    let config = tslint.Configuration.loadConfigurationFromPath(path.resolve(process.cwd(), configurationFilename));
+    lintOneFile(filename, fileContents) {
+        this.tsLinter.lint(filename, fileContents, this.config);
+        return this.tsLinter.getResult().failures
+                   .map((failure) => (
+                       {
+                           rule: failure.ruleName,
+                           text: failure.failure,
+                           line: failure.startPosition.lineAndCharacter.line
+                       }
+                   ));
+    }
 
-    linter.lint(filename, fileContents, config);
+    lintFewFiles(files) {
+        return Promise.all(files.map(filename =>
+            git.show(['HEAD:' + filename])
+               .then(data => ({
+                   filename,
+                   lintResult: this.lintOneFile(filename, data)
+               }))
+        ));
 
-    return linter.getResult().failures
-                 .map(function (failure) {
-                     return {
-                         rule: failure.ruleName,
-                         text: failure.failure,
-                         line: failure.startPosition.lineAndCharacter.line
-                     }
-
-                 });
+    }
 
 }
+class PoliteHook {
+    constructor(){
+        this.tsLinter = new TSLinter();
+    }
 
-function getGit() {
-    git
-        .revparse(['--abbrev-ref', 'HEAD'])
-        .then((branchName) => git.revparse(['origin/HEAD']))
-        .catch((err) => 'origin/develop')
-        .then((lastPushedCommit) => git.diff(['HEAD', lastPushedCommit.trim(), '--name-only']))
-        .then((info) => {
-            let files = info.split('\n').filter(t => !!t);
-            return Promise.all(files.map(filename => {
-                return git.show(['HEAD:' + filename]).then(data => ({
-                    filename,
-                    lintResult: lintMe(filename, data)
-                }));
-            }));
-        })
-        .then(data => {
-            if (data.length) {
-                console.log(colors.blue('I have linted files committed since last push and there are lint errors:'));
-            }
-            data.forEach(fileData => {
-                console.log(colors.magenta(fileData.filename));
-                fileData.lintResult.forEach(({text, rule, line}) => {
-                    console.log('\t', colors.red(text), 'line:', colors.blue(line), 'rule: ' + colors.magenta(rule))
-                })
+    getAllCommittedFiles() {
+        return git
+            .revparse(['--abbrev-ref', 'HEAD'])
+            .then((branchName) => git.revparse(['origin/HEAD']))
+            .catch((err) => 'origin/develop')
+            .then((lastPushedCommit) => git.diff(['HEAD', lastPushedCommit.trim(), '--name-only']))
+            .then((info) => {
+                return info.split('\n').filter(file => !!file);
             });
-            if (data.length) {
-                process.exit(0);
-            }
-        })
-        .catch(err => {
-            console.log(colors.red(err));
-            process.exit(0);
+    }
+
+    outputErrors(lintResults) {
+        if (lintResults.length) {
+            console.log(colors.blue('I have linted files committed since last push and there are lint errors:'));
+        }
+
+        lintResults.forEach(fileData => {
+            console.log(colors.magenta(fileData.filename));
+            fileData.lintResult.forEach(({text, rule, line}) => {
+                console.log('\t', colors.red(text), 'line:', colors.blue(line), 'rule: ' + colors.magenta(rule))
+            })
         });
 
+        if (lintResults.length) {
+            process.exit(0);
+        }
+    }
 
+
+    lintCommitted() {
+        this.getAllCommittedFiles()
+            .then((files) => this.tsLinter
+                                 .lintFewFiles(files.filter(file => /\.ts|js$/.test(file))))
+            .then(data => this.outputErrors(data))
+            .catch(err => {
+                console.log(colors.red(err));
+                process.exit(0);
+            });
+    }
 }
 
-getGit();
+module.exports = new PoliteHook().lintCommitted;
