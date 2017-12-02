@@ -10,6 +10,9 @@ But there are always two problems:
 # How to use
 
 `npm i polite-linter --save-dev`
+
  If you are using husky, just add to your package.json
- `prepush: "polite-linter --rules=path_to_custom_rules --config=path_to_tslint_config`
+
+ `"prepush": "polite-linter --rules=path_to_custom_rules --config=path_to_tslint_config`
+
  If you are using pure git hooks, use `npm run polite-linter --rules=path_to_custom_rules --config=path_to_tslint_config`
