@@ -20,8 +20,9 @@ class TSLinter {
 
     lintOneFile(filename, fileContents) {
         this.tsLinter.lint(filename, fileContents, this.config);
+
         return this.tsLinter.getResult().failures
-                   .map((failure) => (
+                   .map(failure => (
                        {
                            rule: failure.ruleName,
                            text: failure.failure,
@@ -38,24 +39,25 @@ class TSLinter {
                    lintResult: this.lintOneFile(filename, data)
                }))
         ));
-
     }
-
 }
+
 class PoliteHook {
-    constructor(){
-        this.tsLinter = new TSLinter();
+    constructor(linter) {
+        this.tsLinter = linter;
     }
 
     getAllCommittedFiles() {
-        return git
-            .revparse(['--abbrev-ref', 'HEAD'])
-            .then((branchName) => git.revparse(['origin/HEAD']))
-            .catch((err) => 'origin/develop')
-            .then((lastPushedCommit) => git.diff(['HEAD', lastPushedCommit.trim(), '--name-only']))
-            .then((info) => {
-                return info.split('\n').filter(file => !!file);
-            });
+        return git.raw(['status', '-sb'])
+                  .then(statusReport => {
+                          let aheadCount = /ahead (\d+)/.exec(statusReport)[1];
+                          return git.revparse(['HEAD~' + aheadCount]);
+                      }
+                  )
+                  .then((lastPushedCommit) => git.diff(['HEAD', lastPushedCommit.trim(), '--name-only']))
+                  .then((info) => {
+                      return info.split('\n').filter(file => !!file);
+                  });
     }
 
     outputErrors(lintResults) {
@@ -66,8 +68,8 @@ class PoliteHook {
         lintResults.forEach(fileData => {
             console.log(colors.magenta(fileData.filename));
             fileData.lintResult.forEach(({text, rule, line}) => {
-                console.log('\t', colors.red(text), 'line:', colors.blue(line), 'rule: ' + colors.magenta(rule))
-            })
+                console.log('\t', colors.red(text), 'line:', colors.blue(line), 'rule: ' + colors.magenta(rule));
+            });
         });
 
         if (lintResults.length) {
@@ -78,8 +80,10 @@ class PoliteHook {
 
     lintCommitted() {
         this.getAllCommittedFiles()
-            .then((files) => this.tsLinter
-                                 .lintFewFiles(files.filter(file => /\.ts|js$/.test(file))))
+            .then((files) => {
+                return this.tsLinter
+                           .lintFewFiles(files.filter(file => /\.ts|js$/.test(file)))
+            })
             .then(data => this.outputErrors(data))
             .catch(err => {
                 console.log(colors.red(err));
@@ -88,4 +92,7 @@ class PoliteHook {
     }
 }
 
-module.exports = new PoliteHook().lintCommitted;
+let linter = new TSLinter();
+let politeTsLintHook = new PoliteHook(linter);
+
+module.exports = politeTsLintHook.lintCommitted.bind(politeTsLintHook);
