@@ -1,8 +1,16 @@
 {
   "name": "polite-linter",
   "version": "1.0.0",
-  "description": "",
+  "description": "Polite linter to be used with prepush githook",
   "main": "index.js",
+  "keywords": [
+    "git",
+    "hook",
+    "prepush",
+    "linter",
+    "tslint",
+    "eslint"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -10,8 +18,8 @@
     "polite-tslint": "lib/polite-tslint.js",
     "polite-eslint": "lib/polite-eslint.js"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Katerina Pavlenko <cakeinpanic@gmail.com>",
+  "license": "MIT",
   "devDependencies": {
     "eslint": "^4.12.1",
     "tslint": "^5.8.0",
