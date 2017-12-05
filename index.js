@@ -73,13 +73,11 @@ class PoliteHook {
 
 let tslinter = new TSLinter();
 let eslinter = new ESLinter();
+
 let politeTsLintHook = new PoliteHook(tslinter, /\.ts|js$/);
 let politeEsLintHook = new PoliteHook(eslinter, /\.js$/);
 
-function lintAll(){
-    politeTsLintHook.lintCommitted();
-    politeEsLintHook.lintCommitted();
-}
-
-module.exports = politeTsLintHook.lintCommitted.bind(politeTsLintHook);
-module.exports = lintAll;
+module.exports = {
+    tslint: politeTsLintHook.lintCommitted.bind(politeTsLintHook),
+    eslint: politeEsLintHook.lintCommitted.bind(politeEsLintHook)
+};

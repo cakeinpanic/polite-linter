@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "polite-tslint": "lib/polite-tslint.js"
+    "polite-tslint": "lib/polite-tslint.js",
+    "polite-eslint": "lib/polite-eslint.js"
   },
   "author": "",
   "license": "ISC",
