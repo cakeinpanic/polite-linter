@@ -2,6 +2,7 @@
 const git = require('simple-git/promise')(process.cwd());
 const colors = require('colors');
 const TSLinter = require('./src/tslinter');
+const ESLinter = require('./src/eslinter');
 
 class PoliteHook {
     constructor(linter, filemask) {
@@ -70,7 +71,15 @@ class PoliteHook {
     }
 }
 
-let linter = new TSLinter();
-let politeTsLintHook = new PoliteHook(linter, /\.ts|js$/);
+let tslinter = new TSLinter();
+let eslinter = new ESLinter();
+let politeTsLintHook = new PoliteHook(tslinter, /\.ts|js$/);
+let politeEsLintHook = new PoliteHook(eslinter, /\.js$/);
+
+function lintAll(){
+    politeTsLintHook.lintCommitted();
+    politeEsLintHook.lintCommitted();
+}
 
 module.exports = politeTsLintHook.lintCommitted.bind(politeTsLintHook);
+module.exports = lintAll;
