@@ -32,19 +32,26 @@ class TSLinter {
     }
 
     lintFewFiles(files) {
-        return Promise.all(files.map(filename =>
-            git.show(['HEAD:' + filename])
-               .then(data => ({
-                   filename,
-                   lintResult: this.lintOneFile(filename, data)
-               }))
-        ));
+        return files.map(({filename, fileData}) => ({
+            filename: filename,
+            lintResult: this.lintOneFile(filename, fileData)
+        }));
     }
 }
 
 class PoliteHook {
     constructor(linter) {
         this.tsLinter = linter;
+    }
+
+    getAllFilesContent(filePaths){
+        return Promise.all(filePaths.map(filename =>
+            git.show(['HEAD:' + filename])
+               .then(data => ({
+                   filename,
+                   fileData: data
+               }))
+        ));
     }
 
     getAllCommittedFiles() {
@@ -57,6 +64,9 @@ class PoliteHook {
                   .then((lastPushedCommit) => git.diff(['HEAD', lastPushedCommit.trim(), '--name-only']))
                   .then((info) => {
                       return info.split('\n').filter(file => !!file);
+                  })
+                  .then(files => {
+                    return this.getAllFilesContent(files);
                   });
     }
 
@@ -82,7 +92,7 @@ class PoliteHook {
         this.getAllCommittedFiles()
             .then((files) => {
                 return this.tsLinter
-                           .lintFewFiles(files.filter(file => /\.ts|js$/.test(file)))
+                           .lintFewFiles(files.filter(file => /\.ts|js$/.test(file.filename)))
             })
             .then(data => this.outputErrors(data))
             .catch(err => {
