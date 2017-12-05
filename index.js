@@ -4,11 +4,12 @@ const colors = require('colors');
 const TSLinter = require('./src/tslinter');
 
 class PoliteHook {
-    constructor(linter) {
+    constructor(linter, filemask) {
         this.tsLinter = linter;
+        this.filemask = filemask;
     }
 
-    getAllFilesContent(filePaths){
+    getAllFilesContent(filePaths) {
         return Promise.all(filePaths.map(filename =>
             git.show(['HEAD:' + filename])
                .then(data => ({
@@ -18,7 +19,7 @@ class PoliteHook {
         ));
     }
 
-    getAllCommittedFiles() {
+    getAllCommittedFilenames() {
         return git.raw(['status', '-sb'])
                   .then(statusReport => {
                           let aheadCount = /ahead (\d+)/.exec(statusReport)[1];
@@ -26,11 +27,9 @@ class PoliteHook {
                       }
                   )
                   .then((lastPushedCommit) => git.diff(['HEAD', lastPushedCommit.trim(), '--name-only']))
-                  .then((info) => {
-                      return info.split('\n').filter(file => !!file);
-                  })
-                  .then(files => {
-                    return this.getAllFilesContent(files);
+                  .then((info) => info.split('\n').filter(file => !!file))
+                  .catch(() => {
+                      return [];
                   });
     }
 
@@ -53,12 +52,17 @@ class PoliteHook {
 
 
     lintCommitted() {
-        this.getAllCommittedFiles()
-            .then((files) => {
-                return this.tsLinter
-                           .lintFewFiles(files.filter(file => /\.ts|js$/.test(file.filename)))
+        this.getAllCommittedFilenames()
+            .then(filenames => filenames.filter(filename => this.filemask.test(filename)))
+            .then(filenames => {
+                if (!filenames.length) {
+                    console.log(colors.green('No files to lint'));
+                    return [];
+                }
+                return this.getAllFilesContent(filenames);
             })
-            .then(data => this.outputErrors(data))
+            .then((files) => this.tsLinter.lintFewFiles(files))
+            .then(lintData => this.outputErrors(lintData))
             .catch(err => {
                 console.log(colors.red(err));
                 process.exit(0);
@@ -67,6 +71,6 @@ class PoliteHook {
 }
 
 let linter = new TSLinter();
-let politeTsLintHook = new PoliteHook(linter);
+let politeTsLintHook = new PoliteHook(linter, /\.ts|js$/);
 
 module.exports = politeTsLintHook.lintCommitted.bind(politeTsLintHook);
