@@ -2,7 +2,7 @@
 const tslint = require('tslint');
 const path = require('path');
 
-let {rulesDirectory, configurationFilename} = require('../environment');
+let {rulesDirectory, configurationFilename} = require('../../environment');
 
 class TSLinter {
     constructor() {
