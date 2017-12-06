@@ -18,6 +18,10 @@
     "polite-tslint": "lib/polite-tslint.js",
     "polite-eslint": "lib/polite-eslint.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cakeinpanic/polite-linter.git"
+  },
   "author": "Katerina Pavlenko <cakeinpanic@gmail.com>",
   "license": "MIT",
   "devDependencies": {
