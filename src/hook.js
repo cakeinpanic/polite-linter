@@ -34,7 +34,7 @@ class PoliteHook {
 
     outputErrors(lintResults) {
         if (lintResults.length) {
-            console.log(colors.blue('I have linted files committed since last push and there are lint errors:'));
+            console.log(colors.blue(`I have linted files by mask ${this.filemask} committed since last push and there are lint errors:`));
         }
 
         lintResults.forEach(fileData => {
@@ -55,7 +55,7 @@ class PoliteHook {
             .then(filenames => filenames.filter(filename => this.filemask.test(filename)))
             .then(filenames => {
                 if (!filenames.length) {
-                    console.log(colors.green('No files to lint'));
+                    console.log(colors.green(`No files to lint (mask ${this.filemask})`));
                     return [];
                 }
                 return this.getAllFilesContent(filenames);
