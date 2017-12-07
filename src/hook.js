@@ -45,7 +45,7 @@ class PoliteHook {
         });
 
         if (lintResults.length) {
-            process.exit(0);
+            process.exit(1);
         }
     }
 
@@ -64,7 +64,7 @@ class PoliteHook {
             .then(lintData => this.outputErrors(lintData))
             .catch(err => {
                 console.log(colors.red(err));
-                process.exit(0);
+                process.exit(1);
             });
     }
 }
