@@ -1,6 +1,6 @@
 {
   "name": "polite-linter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Polite linter to be used with prepush githook",
   "main": "index.js",
   "keywords": [
