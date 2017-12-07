@@ -56,7 +56,6 @@ class PoliteHook {
     lintCommitted() {
         this.getAllCommittedFilenames()
             .then(filenames => {
-                console.log(filenames)
                 return filenames.filter(filename => this.filemask.test(filename))
             })
             .then(filenames => {
