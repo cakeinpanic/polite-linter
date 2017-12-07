@@ -11,7 +11,6 @@ class ESLinter {
 
     lintOneFile(filename, fileContents) {
         let result = this.cli.executeOnText(fileContents, filename);
-        console.log(result.results[0])
         return result.results[0].messages.map(failure =>
             ({
                 rule: failure.ruleId,
