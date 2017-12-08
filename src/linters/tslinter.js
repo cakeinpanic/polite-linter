@@ -6,27 +6,26 @@ let {rulesDirectory, configurationFilename} = require('../../environment');
 
 class TSLinter {
     constructor() {
-        const options = {
+        this.options = {
             fix: false,
             formatter: 'json',
             rulesDirectory: rulesDirectory
         };
-
-        this.tsLinter = new tslint.Linter(options);
-        this.config = tslint.Configuration.loadConfigurationFromPath(path.resolve(process.cwd(), configurationFilename));
     }
 
     lintOneFile(filename, fileContents) {
-        this.tsLinter.lint(filename, fileContents, this.config);
+        const tsLinter = new tslint.Linter(this.options);
+        const config = tslint.Configuration.loadConfigurationFromPath(path.resolve(process.cwd(), configurationFilename));
 
-        return this.tsLinter.getResult().failures
-                   .map(failure => (
-                       {
-                           rule: failure.ruleName,
-                           text: failure.failure,
-                           line: failure.startPosition.lineAndCharacter.line
-                       }
-                   ));
+        tsLinter.lint(filename, fileContents, config);
+
+        return tsLinter.getResult().failures.map(failure => (
+            {
+                rule: failure.ruleName,
+                text: failure.failure,
+                line: failure.startPosition.lineAndCharacter.line
+            }
+        ));
     }
 
     lintFewFiles(files) {
