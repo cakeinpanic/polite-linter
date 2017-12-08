@@ -11,21 +11,14 @@ class PoliteHook {
 
     getAllFilesContent(filePaths) {
         return Promise
-            .all(
-                filePaths.map(filename => {
-                        // cant use git.show cause it produces fatal error
-                        return new Promise((resolve) => {
-                            exec(`git show HEAD:${filename}`,
-                                (error, data) => {
-                                    resolve({
-                                        filename,
-                                        fileData: data
-                                    });
-                                });
-                        });
-                    }
-                )
-            )
+            .all(filePaths.map(filename =>
+                git.show(['HEAD:' + filename])
+                   .then(data => ({
+                       filename,
+                       fileData: data
+                   }))
+                   .catch(() => ({}))
+            ))
             .then(filesData => filesData.filter(({fileData}) => !!fileData))
     }
 
