@@ -1,7 +1,7 @@
 'use strict';
 const git = require('simple-git/promise')(process.cwd()).silent(true);
 const colors = require('colors');
-const {exec} = require('child_process');
+const {execSync} = require('child_process');
 
 class PoliteHook {
     constructor(linter, filemask) {
@@ -22,35 +22,53 @@ class PoliteHook {
             .then(filesData => filesData.filter(({fileData}) => !!fileData))
     }
 
-    getOriginBranch() {
-        return git.revparse(['--abbrev-ref', 'HEAD'])
-                  .then((branchName) => {
-                      return git.revparse([`HEAD/${branchName.trim()}`])
-                                .then(() => branchName)
-                  })
-                  .catch(() => {
-                      // https://gist.github.com/joechrysler/6073741
-                      return new Promise((resolve) => {
-                          exec("git show-branch -a \\\n" +
-                              "| grep '\\*' \\\n" +
-                              "| grep -v `git rev-parse --abbrev-ref HEAD` \\\n" +
-                              "| head -n1 \\\n" +
-                              "| sed 's/.*\\[\\(.*\\)\\].*/\\1/' \\\n" +
-                              "| sed 's/[\\^~].*//'",
-                              (error, branchName) => {
-                                  resolve(branchName);
-                              });
-                      })
-                  })
-                  .then(branchName => `origin/${branchName.trim()}`)
+    checkoutPrevCommit() {
+        execSync(`git checkout HEAD^`, {stdio : 'pipe' });
+        const isPushed = execSync(`git branch -r --contains HEAD`).toString().trim();
+        return isPushed && execSync('git rev-parse HEAD', {stdio : 'pipe' }).toString().trim();
     }
 
+
+    stash() {
+        const filesChanged = execSync('git status | egrep -w "modified|deleted" | wc -l',{stdio : 'pipe' }).toString();
+        if (filesChanged > 0) {
+            execSync('git add .').toString();
+            execSync('git commit --no-verify  -am "temp"').toString();
+            this.stashed = true;
+        }
+    }
+
+
+    unstash(startBranch) {
+        execSync(`git checkout ${startBranch}`, {stdio : 'pipe' }).toString();
+        if (this.stashed) {
+            execSync(`git reset HEAD^ --soft`,  {stdio : 'pipe' }).toString();
+        }
+        this.stashed = false;
+    }
+
+
+    getLastPushedCommit() {
+        this.stashed = false;
+
+        const startBranch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
+        this.stash();
+        let current = this.checkoutPrevCommit();
+
+        while (!current) {
+            current = this.checkoutPrevCommit();
+        }
+        this.unstash(startBranch);
+
+        return current;
+    }
+
+
     getAllCommittedFilenames() {
-        return this.getOriginBranch()
-                   .then((branchName) => git.revparse([branchName]))
-                   .then((lastPushedCommit) => git.diff(['HEAD', lastPushedCommit.trim(), '--name-only']))
-                   .then((info) => info.split('\n'))
-                   .catch(() => []);
+        const lastPushedCommit = this.getLastPushedCommit();
+        return git.diff(['HEAD', lastPushedCommit, '--name-only'])
+                  .then((info) => info.split('\n'))
+                  .catch(() => []);
 
     }
 
