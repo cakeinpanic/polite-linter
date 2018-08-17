@@ -18,7 +18,7 @@ Polite linter for now supports [eslint](https://eslint.org/) and [tslint](https:
 
 `npm i polite-linter --save-dev`
 
- If you are using husky, just add to your `package.json`
+ If you are using [husky](https://github.com/typicode/husky), just add to your `package.json`
 
  `"prepush": "polite-tslint --rules=path_to_custom_rules --config=path_to_tslint_config`
 
